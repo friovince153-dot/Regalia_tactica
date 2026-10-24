@@ -5,7 +5,7 @@ from combat import Battle
 
 if getattr(sys, 'frozen', False):
     os.chdir(sys._MEIPASS)   # point relative paths at the unpacked bundle
-
+    
 pygame.init()
 
 clock = pygame.time.Clock()
