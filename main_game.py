@@ -12,7 +12,7 @@ bottom_panel = 150
 screen_width = 800
 screen_height =  450 + bottom_panel     
 screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Fantasy")
+pygame.display.set_caption("Regalia Tactica")
 
 #font
 font = pygame.font.SysFont('Times New Roman', 26)
