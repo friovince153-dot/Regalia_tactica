@@ -1,7 +1,102 @@
+import math
 import pygame 
 import os, sys
 from characters import Bandit, MageHealer 
 from combat import Battle
+
+# ---------- MAIN MENU THEME ----------
+menu_dark = (18, 14, 24)
+menu_parchment = (232, 205, 160)
+menu_gold = (212, 175, 55)
+menu_ember = (255, 120, 40)
+menu_dim = (120, 100, 90)
+
+title_font = pygame.font.SysFont('Times New Roman', 68, bold=True)
+menu_font = pygame.font.SysFont('Times New Roman', 32, bold=True)
+small_font = pygame.font.SysFont('Times New Roman', 20)
+
+menu_options = ["Start Battle", "Quit"]
+selected_option = 0
+in_menu = True
+menu_time = 0
+
+def draw_menu_button(text, x, y, width, height, selected):
+    mouse_pos = pygame.mouse.get_pos()
+    hovered = pygame.Rect(x, y, width, height).collidepoint(mouse_pos)
+
+    if selected or hovered:
+        border_color = menu_ember
+        fill_color = (48, 30, 24)
+        text_color = menu_parchment
+    else:
+        border_color = menu_gold
+        fill_color = (28, 22, 32)
+        text_color = menu_dim
+
+    pygame.draw.rect(screen, fill_color, (x, y, width, height), border_radius=12)
+    pygame.draw.rect(screen, border_color, (x, y, width, height), 3, border_radius=12)
+
+    label = menu_font.render(text, True, text_color)
+    label_rect = label.get_rect(center=(x + width // 2, y + height // 2))
+    screen.blit(label, label_rect)
+
+    return pygame.Rect(x, y, width, height)
+
+def draw_main_menu():
+    global menu_time
+    menu_time += 1
+
+    # Dark atmospheric background
+    screen.fill(menu_dark)
+
+    # Subtle vignette / glowing ember effect
+    glow_radius = 260 + int(18 * math.sin(menu_time * 0.03))
+    glow = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+    pygame.draw.circle(
+        glow,
+        (255, 110, 30, 28),
+        (screen_width // 2, screen_height // 2 - 40),
+        glow_radius
+    )
+    screen.blit(glow, (0, 0))
+
+    # Title
+    title = title_font.render("REGALIA TACTICA", True, menu_parchment)
+    title_shadow = title_font.render("REGALIA TACTICA", True, (0, 0, 0))
+    title_rect = title.get_rect(center=(screen_width // 2, 125))
+
+    screen.blit(title_shadow, (title_rect.x + 4, title_rect.y + 5))
+    screen.blit(title, title_rect)
+
+    pygame.draw.line(
+        screen,
+        menu_gold,
+        (screen_width // 2 - 230, 180),
+        (screen_width // 2 + 230, 180),
+        3
+    )
+
+    subtitle = small_font.render("A Tactical Fantasy Battle", True, menu_gold)
+    screen.blit(
+        subtitle,
+        subtitle.get_rect(center=(screen_width // 2, 210))
+    )
+
+    # Buttons
+    button_width = 320
+    button_height = 64
+    button_x = (screen_width - button_width) // 2
+
+    rects = []
+    for index, option in enumerate(menu_options):
+        y = 300 + index * 95
+        rect = draw_menu_button(option, button_x, y, button_width, button_height, index == selected_option)
+        rects.append(rect)
+
+    hint = small_font.render("Use Up / Down and Enter, or click a button", True, (170, 150, 130))
+    screen.blit(hint, hint.get_rect(center=(screen_width // 2, screen_height - 45)))
+
+    return rects
 
 if getattr(sys, 'frozen', False):
     os.chdir(sys._MEIPASS)   # point relative paths at the unpacked bundle
@@ -86,13 +181,46 @@ while run:
     clock.tick(fps)
 
     clicked = False
+    mouse_pos = pygame.mouse.get_pos()
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            clicked = True
 
-    battle.update(pygame.mouse.get_pos(), clicked)   # updates every fighter, so no f.update() calls
+        if in_menu:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_option = (selected_option - 1) % len(menu_options)
+                elif event.key == pygame.K_DOWN:
+                    selected_option = (selected_option + 1) % len(menu_options)
+                elif event.key == pygame.K_RETURN:
+                    if selected_option == 0:
+                        in_menu = False
+                    elif selected_option == 1:
+                        run = False
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                clicked = True
+        else:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                clicked = True
+
+    if in_menu:
+        menu_buttons = draw_main_menu()
+
+        for index, rect in enumerate(menu_buttons):
+            if rect.collidepoint(mouse_pos):
+                selected_option = index
+                if clicked:
+                    if index == 0:
+                        in_menu = False
+                    elif index == 1:
+                        run = False
+
+        pygame.display.update()
+        continue
+
+    battle.update(mouse_pos, clicked)  # updates every fighter, so no f.update() calls
 
     draw_bg()
     for f in (mage, bandit1, bandit2):
@@ -101,6 +229,5 @@ while run:
     battle.draw(screen)
 
     pygame.display.update()
-
 
 pygame.quit()
