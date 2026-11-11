@@ -4,6 +4,12 @@ import os, sys
 from characters import Bandit, MageHealer 
 from combat import Battle
 
+if getattr(sys, 'frozen', False):
+    os.chdir(sys._MEIPASS)   # point relative paths at the unpacked bundle
+        
+pygame.init()
+
+
 # ---------- MAIN MENU THEME ----------
 menu_dark = (18, 14, 24)
 menu_parchment = (232, 205, 160)
@@ -22,9 +28,8 @@ menu_time = 0
 
 def draw_menu_button(text, x, y, width, height, selected):
     mouse_pos = pygame.mouse.get_pos()
-    hovered = pygame.Rect(x, y, width, height).collidepoint(mouse_pos)
 
-    if selected or hovered:
+    if selected:
         border_color = menu_ember
         fill_color = (48, 30, 24)
         text_color = menu_parchment
@@ -98,10 +103,7 @@ def draw_main_menu():
 
     return rects
 
-if getattr(sys, 'frozen', False):
-    os.chdir(sys._MEIPASS)   # point relative paths at the unpacked bundle
-    
-pygame.init()
+
 
 clock = pygame.time.Clock()
 fps = 60
@@ -155,10 +157,10 @@ mage = MageHealer(200, 446, "Sage", max_hp=30, strength=5,
                 magic=8, speed=10, resistance=8)
 
 bandit1 = Bandit(542, 442, "Bandit", max_hp=20, strength=10,
-                 magic=0, speed=12, resistance=5)
+                magic=0, speed=12, resistance=5)
 
 bandit2 = Bandit(692, 442, "Bandit", max_hp=20, strength=10,
-                 magic=0, speed=12, resistance=5)
+                magic=0, speed=12, resistance=5)
 
 top = screen_height - bottom_panel
 Sage_health_bar = HealthBar(100, top + 45, mage.hp, mage.max_hp)
@@ -182,6 +184,7 @@ while run:
 
     clicked = False
     mouse_pos = pygame.mouse.get_pos()
+    menu_buttons = draw_main_menu() if in_menu else []
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -193,32 +196,34 @@ while run:
                     selected_option = (selected_option - 1) % len(menu_options)
                 elif event.key == pygame.K_DOWN:
                     selected_option = (selected_option + 1) % len(menu_options)
-                elif event.key == pygame.K_RETURN:
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     if selected_option == 0:
                         in_menu = False
-                    elif selected_option == 1:
+                    else:
                         run = False
-
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                clicked = True
-        else:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                clicked = True
+            elif event.type == pygame.MOUSEMOTION:
+                for index, rect in enumerate(menu_buttons):
+                    if rect.collidepoint(event.pos):
+                        selected_option = index
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for index, rect in enumerate(menu_buttons):
+                    if rect.collidepoint(event.pos):
+                        selected_option = index
+                        if index == 0:
+                            in_menu = False
+                        else:
+                            run = False
+                        break
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            clicked = True
+            mouse_pos = event.pos
 
     if in_menu:
-        menu_buttons = draw_main_menu()
-
-        for index, rect in enumerate(menu_buttons):
-            if rect.collidepoint(mouse_pos):
-                selected_option = index
-                if clicked:
-                    if index == 0:
-                        in_menu = False
-                    elif index == 1:
-                        run = False
-
         pygame.display.update()
         continue
+
+    if not run:
+        break
 
     battle.update(mouse_pos, clicked)  # updates every fighter, so no f.update() calls
 
